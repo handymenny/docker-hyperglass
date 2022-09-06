@@ -36,6 +36,8 @@ RUN npx degit thatmattlove/hyperglass /hyperglass-src
 
 # Build wheel with world writable cache
 WORKDIR /hyperglass-src
+# Create cache dir
+RUN mkdir -p /tmp/cache && chmod -R 777 /tmp/cache
 RUN pip wheel --cache-dir /tmp/cache/ .
 
 # switch user to have a clean home dir
