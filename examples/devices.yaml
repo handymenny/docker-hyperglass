@@ -1,0 +1,18 @@
+routers:
+  - name: New York City, NY
+    address: 10.0.0.1
+    network:
+      name: production
+      display_name: AS65000
+    credential:
+      username: username
+      password: password
+    port: 22
+    nos: juniper
+    vrfs:
+      - name: global
+        default: true
+        ipv4:
+          source_address: 192.0.2.1
+        ipv6:
+          source_address: 2001:db8::1

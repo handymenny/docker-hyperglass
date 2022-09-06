@@ -1,0 +1,3 @@
+juniper:
+  ipv4_default:
+    bgp_route: "show route protocol bgp {target} terse"
