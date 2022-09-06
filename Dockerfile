@@ -21,7 +21,7 @@ RUN \
 
 # Create user hyperglass and chown its home directory
 RUN \
-  adduser --shell /usr/sbin/nologin --home ${HYPERGLASS_HOME} hyperglass && \
+  adduser --disabled-password --gecos "" --shell /usr/sbin/nologin --home ${HYPERGLASS_HOME} hyperglass && \
   chown hyperglass:hyperglass ${HYPERGLASS_HOME}
 
 
@@ -42,12 +42,12 @@ RUN pip wheel --cache-dir /tmp/cache/ .
 USER hyperglass
 # Install the wheel built in the previous step, use the same cache to avoid downloading/building dependencies
 # We use --user because hyperglass needs a writable python lib folder
-RUN pip install --user --cache-dir /tmp/cache/ hyperglass*.whl
+RUN pip install --user --cache-dir /tmp/cache/ --no-warn-script-location hyperglass*.whl
 
 # Initialize node modules (we don't use build-ui because it requires configuration)
 # This is the same command used by build-ui: https://github.com/thatmattlove/hyperglass/blob/c52a6f609843177671d38bcad59b8bd658f46b64/hyperglass/util/frontend.py#L96
 WORKDIR ${HYPERGLASS_HOME}/.local/lib/python3.9/site-packages/hyperglass/ui
-RUN yarn --silent --emoji false
+RUN ["/bin/bash", "-c", "yarn --silent --emoji false 2> >(grep -v warning 1>&2)"]
 
 FROM base AS app
 USER hyperglass
