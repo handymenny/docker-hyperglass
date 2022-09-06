@@ -29,7 +29,7 @@ FROM base AS builder
 ARG HYPERGLASS_HOME
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y build-essential zlib1g-dev libjpeg-dev git
+RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git
 
 # Download git source
 RUN npx degit thatmattlove/hyperglass /hyperglass-src
