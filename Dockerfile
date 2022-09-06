@@ -1,52 +1,74 @@
-ARG HYPERGLASS_PATH=/opt/hyperglass
-FROM python:3 AS base
+# This is the hyperglass user home directory, this is the base dir for configs, static files and python binaries
+ARG HYPERGLASS_HOME=/opt
 
-# TODO nodejs and yarn are required during "build-ui", but also at runtime (in "start")
-#      To my understanding the runtime requirement should be removed, because it should only be used in "build-ui"
-#      Once fixed, this RUN can be moved to the builder stage instead
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
- && curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null \
- && echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | tee /etc/apt/sources.list.d/yarn.list \
- && apt update \
- && apt install -y nodejs yarn \
- && rm -rf /var/lib/apt/lists/*
+# Some dependencies don't compile with python 3.10
+FROM python:3.9-slim-bullseye AS base
+ARG HYPERGLASS_HOME
+
+# install dependencies (yarn nodejs zlib libjpeg wget)
+RUN \
+  apt-get update && \
+  apt-get install wget gnupg2 zlib1g libjpeg62-turbo -y && \
+  # hyperglass 1.0.4 only supports node 14. See: https://github.com/thatmattlove/hyperglass/issues/209
+  echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_14.x bullseye main" > /etc/apt/sources.list.d/nodesource.list && \
+  echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" > /etc/apt/sources.list.d/yarn.list && \
+  wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | tee /usr/share/keyrings/nodesource.gpg >/dev/null && \
+  wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
+  apt-get update && \
+  # RUN dependencies
+  apt-get install -y nodejs yarn && \
+  rm -rf /var/lib/apt/lists/*
+
+# Create user hyperglass and chown its home directory
+RUN \
+  adduser --shell /usr/sbin/nologin --home ${HYPERGLASS_HOME} hyperglass && \
+  chown hyperglass:hyperglass ${HYPERGLASS_HOME}
+
 
 FROM base AS builder
-ARG HYPERGLASS_PATH
+ARG HYPERGLASS_HOME
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-RUN mkdir -p /usr/local/src/hyperglass ${HYPERGLASS_PATH}
-# TODO Only COPY the files that are required for the build
-#      Keep .dockerignore in mind too
-COPY . /usr/local/src/hyperglass
-WORKDIR /usr/local/src/hyperglass
-RUN /root/.poetry/bin/poetry build
-RUN cd ./dist/ && pip install hyperglass*.whl
-RUN hyperglass setup
-# TODO "build-ui" needs a devices.yaml.
-#      The "build-ui" requirement for devices.yaml should be removed, because to my understanding it's only needed in "start"
-#      Once fixed, this COPY can be moved to the app stage instead
-COPY ./hyperglass/examples/devices.yaml ${HYPERGLASS_PATH}
-RUN hyperglass build-ui
+# Install build dependencies
+RUN apt-get update && apt-get install -y build-essential zlib1g-dev libjpeg-dev git
+
+# Download git source
+RUN npx degit thatmattlove/hyperglass /hyperglass-src
+
+# Build wheel with world writable cache
+WORKDIR /hyperglass-src
+RUN pip wheel --cache-dir /tmp/cache/ .
+
+# switch user to have a clean home dir
+USER hyperglass
+# Install the wheel built in the previous step, use the same cache to avoid downloading/building dependencies
+# We use --user because hyperglass needs a writable python lib folder
+RUN pip install --user --cache-dir /tmp/cache/ hyperglass*.whl
+
+# Initialize node modules (we don't use build-ui because it requires configuration)
+# This is the same command used by build-ui: https://github.com/thatmattlove/hyperglass/blob/c52a6f609843177671d38bcad59b8bd658f46b64/hyperglass/util/frontend.py#L96
+WORKDIR ${HYPERGLASS_HOME}/.local/lib/python3.9/site-packages/hyperglass/ui
+RUN yarn --silent --emoji false
 
 FROM base AS app
-ARG HYPERGLASS_PATH
+USER hyperglass
 
-COPY --from=builder /usr/local/src/hyperglass/dist/ /tmp/build
-RUN cd /tmp/build/ && pip install hyperglass*.whl
-RUN useradd -s /usr/sbin/nologin hyperglass
-COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_PATH} ${HYPERGLASS_PATH}
-COPY --chown=hyperglass:hyperglass ./hyperglass/examples/hyperglass.docker.yaml ${HYPERGLASS_PATH}/hyperglass.yaml
-# TODO Log to stderr by default instead of to /tmp/hyperglass.log
-#      RUN ln -sf /dev/stderr /tmp/hyperglass.log
-#      ^ Won't work because stderr isn't seekable
+# Add .local/bin to PATH
+ENV PATH="${PATH}:${HYPERGLASS_HOME}/.local/bin"
 
-# TODO hyperglass needs to run as root, i.e. because
-#      "EACCES: permission denied, mkdir '/usr/local/lib/python3.9/site-packages/hyperglass/ui/node_modules'"
-#      This is undesired, uncomment the next line once fixed
-# USER hyperglass
+# Copy python files from builder
+COPY --from=builder --chown=hyperglass:hyperglass  ${HYPERGLASS_HOME}/.local/ ${HYPERGLASS_HOME}/.local/
 
-ENV HYPERGLASS_PATH ${HYPERGLASS_PATH}
+# Run setup with default config dir (${HYPERGLASS_HOME}/hyperglass)
+# Add dummy hyperglass.env.json
+RUN \
+  hyperglass setup -d && \
+  echo '{"configFile": "/", "buildId": "0"}' > ${HYPERGLASS_HOME}/hyperglass/static/hyperglass.env.json
+
+# We don't run build-ui here because it requires configuration, start will do build-ui with the right configuration
+#RUN hyperglass build-ui
 
 EXPOSE 8001
-CMD ["hyperglass", "start"]
+CMD \
+  # Make hyperglass.env.json permanent
+  ln -s ~/hyperglass/static/hyperglass.env.json /tmp/hyperglass.env.json && \
+  hyperglass start

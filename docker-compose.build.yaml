@@ -1,6 +1,6 @@
 %YAML 1.1
 ---
-version: '3.7'
+version: '3.9'
 services:
   hyperglass:
     build:

@@ -1,36 +1,53 @@
 %YAML 1.1
 ---
-version: '3.7'
+version: '3.9'
 services:
   hyperglass:
-    image: checktheroads/hyperglass:latest
+    image: handymenny/hyperglass:latest
     networks:
     - hyperglass
-    # restart: unless-stopped
-    # ports:
-    # - 8001:8001
-    # volumes:
-    # - ./devices.yaml:/opt/hyperglass/devices.yaml
-    # - ./hyperglass.yaml:/opt/hyperglass/hyperglass.yaml
-    # - ./commands.yaml:/opt/hyperglass/commands.yaml
+    #restart: unless-stopped
+    ports:
+    - 8001:8001
+    volumes:
+    - ./examples/devices.yaml:/opt/hyperglass/devices.yaml:ro
+    - ./examples/hyperglass.yaml:/opt/hyperglass/hyperglass.yaml:ro
+    # Optional commands.yaml
+    # - ./commands.yaml:/opt/hyperglass/commands.yaml:ro
+    # Optional put static files in a dedicated volume
+    # - static:/opt/hyperglass/static/
+    tmpfs:
+    - /tmp/
+    # Set hyperglass user gid and uid
+    - /opt/.local/lib/python3.9/site-packages/hyperglass/ui/.next:mode=700,uid=1000,gid=1000
     depends_on:
     - redis
     healthcheck:
-      test: test "$$(curl -o /dev/null -s --user-agent docker-healthcheck http://localhost:8001 --write-out %{http_code})" = "200"
+      test: test "$$(wget --server-response --spider --quiet http://localhost:8001 2>&1 | awk 'NR==1{print $$2}')" = "200"
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        # first run might hog all host's resources, better to limit them
+        limits:
+          cpus: '1.5'
+          memory: 2560M
   redis:
     image: redis:latest
     networks:
-    - hyperglass
-    # restart: unless-stopped
+      hyperglass:
+        aliases: 
+        - redis.hyperglass
+    restart: unless-stopped
     command: [redis-server, --appendonly, 'yes']
     volumes:
     - redis-data:/data
 
 volumes:
   redis-data:
+  # Optional put static files in a dedicated volume
+  # static:
 
 networks:
   hyperglass:
