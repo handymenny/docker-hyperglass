@@ -29,15 +29,12 @@ RUN npx degit thatmattlove/hyperglass /hyperglass-src
 
 # Build wheel with world writable cache
 WORKDIR /hyperglass-src
-# Create cache dir
-RUN mkdir -p /tmp/cache && chmod -R 777 /tmp/cache
-RUN pip wheel --cache-dir /tmp/cache/ .
+RUN pip wheel --no-cache-dir --no-deps .
 
 # switch user to have a clean home dir
 USER hyperglass
-# Install the wheel built in the previous step, use the same cache to avoid downloading/building dependencies
 # We use --user because hyperglass needs a writable python lib folder
-RUN pip install --user --cache-dir /tmp/cache/ --no-warn-script-location hyperglass*.whl
+RUN pip install --user --no-cache-dir --no-warn-script-location hyperglass*.whl
 
 # Initialize node modules (we don't use build-ui because it requires configuration)
 # This is the same command used by build-ui: https://github.com/thatmattlove/hyperglass/blob/c52a6f609843177671d38bcad59b8bd658f46b64/hyperglass/util/frontend.py#L96
