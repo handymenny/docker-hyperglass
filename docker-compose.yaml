@@ -19,7 +19,7 @@ services:
     tmpfs:
     - /tmp/
     # Set hyperglass user gid and uid
-    - /opt/.local/lib/python3.9/site-packages/hyperglass/ui/.next:mode=700,uid=1000,gid=1000
+    - /opt/.local/lib/python3.9/site-packages/hyperglass/ui/.next:mode=700,uid=4001,gid=4001
     depends_on:
     - redis
     healthcheck:

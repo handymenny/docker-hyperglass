@@ -13,7 +13,7 @@ RUN \
 
 # Create user hyperglass and chown its home directory
 RUN \
-  adduser --disabled-password --gecos "" --shell /usr/sbin/nologin --home ${HYPERGLASS_HOME} hyperglass && \
+  adduser --disabled-password --gecos "" --shell /usr/sbin/nologin --home ${HYPERGLASS_HOME} hyperglass --uid 4001 && \
   chown hyperglass:hyperglass ${HYPERGLASS_HOME}
 
 
