@@ -36,10 +36,6 @@ USER hyperglass
 # We use --user because hyperglass needs a writable python lib folder
 RUN pip install --user --no-cache-dir --no-warn-script-location hyperglass*.whl
 
-# Initialize node modules (we don't use build-ui because it requires configuration)
-# This is the same command used by build-ui: https://github.com/thatmattlove/hyperglass/blob/c52a6f609843177671d38bcad59b8bd658f46b64/hyperglass/util/frontend.py#L96
-WORKDIR ${HYPERGLASS_HOME}/.local/lib/python3.9/site-packages/hyperglass/ui
-RUN ["/bin/bash", "-c", "yarn --silent --emoji false 2> >(grep -v warning 1>&2)"]
 
 FROM base AS app
 USER hyperglass
