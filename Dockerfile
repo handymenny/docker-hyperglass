@@ -1,22 +1,14 @@
 # This is the hyperglass user home directory, this is the base dir for configs, static files and python binaries
 ARG HYPERGLASS_HOME=/opt
 
-# Some dependencies don't compile with python 3.10
-FROM python:3.9-slim-bullseye AS base
+# hyperglass 1.0.4 only supports node 14. See: https://github.com/thatmattlove/hyperglass/issues/209
+FROM node:14-bullseye-slim AS base
 ARG HYPERGLASS_HOME
 
-# install dependencies (yarn nodejs zlib libjpeg wget)
+# install dependencies (python3 pip zlib libjpeg wget)
 RUN \
   apt-get update && \
-  apt-get install wget gnupg2 zlib1g libjpeg62-turbo -y && \
-  # hyperglass 1.0.4 only supports node 14. See: https://github.com/thatmattlove/hyperglass/issues/209
-  echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_14.x bullseye main" > /etc/apt/sources.list.d/nodesource.list && \
-  echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" > /etc/apt/sources.list.d/yarn.list && \
-  wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | tee /usr/share/keyrings/nodesource.gpg >/dev/null && \
-  wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
-  apt-get update && \
-  # RUN dependencies
-  apt-get install -y nodejs yarn && \
+  apt-get install wget zlib1g libjpeg62-turbo python3 python3-pip -y --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
 # Create user hyperglass and chown its home directory
@@ -29,7 +21,7 @@ FROM base AS builder
 ARG HYPERGLASS_HOME
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git
+RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git python3-dev
 
 # Download git source
 RUN npx degit thatmattlove/hyperglass /hyperglass-src
