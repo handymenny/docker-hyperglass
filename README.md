@@ -1,5 +1,8 @@
 ## Docker
 
+> **Warning**
+> First run can hog host resources for several minutes and requires internet access.
+
 ### User: General use
 
 - Copy [docker-compose.yaml](docker-compose.yaml) to your destination and edit as desired
