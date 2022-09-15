@@ -7,9 +7,9 @@
 
 - Copy [docker-compose.yaml](docker-compose.yaml) to your destination and edit as desired
 - Create a valid `devices.yaml`
-    - I.e. based on [hyperglass/examples/devices.yaml](hyperglass/examples/devices.yaml)
+    - I.e. based on [examples/devices.yaml](examples/devices.yaml)
 - Create a valid `hyperglass.yaml`
-    - I.e. based on [hyperglass/examples/hyperglass.yaml](hyperglass/examples/hyperglass.docker.yaml)
+    - I.e. based on [examples/hyperglass.yaml](examples/hyperglass.docker.yaml)
     - If redis runs on docker make sure `cache.host` is set to `redis.hyperglass`
 - Run `docker-compose up -d`
 - Run `docker-compose ps`, to wait till it's up
