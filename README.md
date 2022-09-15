@@ -9,7 +9,7 @@
 - Create a valid `devices.yaml`
     - I.e. based on [examples/devices.yaml](examples/devices.yaml)
 - Create a valid `hyperglass.yaml`
-    - I.e. based on [examples/hyperglass.yaml](examples/hyperglass.docker.yaml)
+    - I.e. based on [examples/hyperglass.yaml](examples/hyperglass.yaml)
     - If redis runs on docker make sure `cache.host` is set to `redis.hyperglass`
 - Run `docker-compose up -d`
 - Run `docker-compose ps`, to wait till it's up
