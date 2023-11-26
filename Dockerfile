@@ -1,8 +1,9 @@
 # This is the hyperglass user home directory, this is the base dir for configs, static files and python binaries
 ARG HYPERGLASS_HOME=/opt
 
-# hyperglass 1.0.4 only supports node 14. See: https://github.com/thatmattlove/hyperglass/issues/209
-FROM node:14-bullseye-slim AS base
+# Developer suggests node 14, python 3.6 and ubuntu 18.04
+# See: https://github.com/thatmattlove/hyperglass/blob/5e5acae4aa54e876940a889f94e44a61a333fe3b/README.md
+FROM node:14-buster-slim AS base
 ARG HYPERGLASS_HOME
 
 # install dependencies (python3 pip zlib libjpeg wget)
@@ -28,12 +29,12 @@ RUN npx degit thatmattlove/hyperglass /hyperglass-src
 
 # Build wheel with world writable cache
 WORKDIR /hyperglass-src
-RUN pip wheel --no-cache-dir --no-deps .
+RUN pip3 wheel --no-cache-dir --no-deps .
 
 # switch user to have a clean home dir
 USER hyperglass
 # We use --user because hyperglass needs a writable python lib folder
-RUN pip install --user --no-cache-dir --no-warn-script-location hyperglass*.whl
+RUN pip3 install --user --no-cache-dir --no-warn-script-location hyperglass*.whl
 
 
 FROM base AS app
