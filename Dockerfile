@@ -1,10 +1,13 @@
-# This is the hyperglass user home directory, this is the base dir for configs, static files and python binaries
+# This is the hyperglass user home directory, this is the base dir for configs and static files
 ARG HYPERGLASS_HOME=/opt
+# This is the base dire for venv and python binaries
+ARG HYPERGLASS_BIN_PATH=/opt/app
 
 # Developer suggests node 14, python 3.6 and ubuntu 18.04
 # See: https://github.com/thatmattlove/hyperglass/blob/5e5acae4aa54e876940a889f94e44a61a333fe3b/README.md
 FROM node:14-buster-slim AS base
 ARG HYPERGLASS_HOME
+ARG HYPERGLASS_BIN_PATH
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
@@ -14,10 +17,10 @@ ENV POETRY_NO_INTERACTION=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# install dependencies (python3 pip zlib libjpeg wget)
+# install runtime dependencies (python3 zlib libjpeg wget)
 RUN \
   apt-get update && \
-  apt-get install wget zlib1g libjpeg62-turbo python3 python3-pip -y --no-install-recommends && \
+  apt-get install wget zlib1g libjpeg62-turbo python3 -y --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
 # Create user hyperglass and chown its home directory
@@ -27,16 +30,15 @@ RUN \
 
 
 FROM base AS builder
-ARG HYPERGLASS_HOME
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git python3-dev python3-venv
 
 # Download git source
-RUN npx degit thatmattlove/hyperglass ${HYPERGLASS_HOME}/dist
+RUN npx degit thatmattlove/hyperglass ${HYPERGLASS_BIN_PATH}
 
-# Dist dir to avoid creating two dirs named hyperglass in ${HYPERGLASS_HOME}
-WORKDIR ${HYPERGLASS_HOME}/dist
+# Separate bin dir to avoid creating two dirs named hyperglass in ${HYPERGLASS_HOME}
+WORKDIR ${HYPERGLASS_BIN_PATH}
 
 # Install poetry
 RUN wget -qO- https://install.python-poetry.org | python3 -
@@ -49,11 +51,11 @@ FROM base AS app
 USER hyperglass
 
 # Add .venv/bin to PATH
-ENV PATH="${PATH}:${HYPERGLASS_HOME}/dist/.venv/bin"
+ENV PATH="${PATH}:${HYPERGLASS_BIN_PATH}/.venv/bin"
 
 # Copy python files from builder
-COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_HOME}/dist/.venv ${HYPERGLASS_HOME}/dist/.venv
-COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_HOME}/dist/hyperglass ${HYPERGLASS_HOME}/dist/hyperglass
+COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_BIN_PATH}/.venv ${HYPERGLASS_BIN_PATH}/.venv
+COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_BIN_PATH}/hyperglass ${HYPERGLASS_BIN_PATH}/hyperglass
 
 # Run setup with default config dir (${HYPERGLASS_HOME}/hyperglass)
 # Add dummy hyperglass.env.json
