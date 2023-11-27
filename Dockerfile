@@ -20,31 +20,35 @@ RUN \
 
 FROM base AS builder
 ARG HYPERGLASS_HOME
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git python3-dev
+RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git python3-dev python3-venv
 
 # Download git source
-RUN npx degit thatmattlove/hyperglass /hyperglass-src
+RUN npx degit thatmattlove/hyperglass ${HYPERGLASS_HOME}/dist
 
-# Build wheel with world writable cache
-WORKDIR /hyperglass-src
-RUN pip3 wheel --no-cache-dir --no-deps .
+# Dist dir to avoid creating two dirs named hyperglass in ${HYPERGLASS_HOME}
+WORKDIR ${HYPERGLASS_HOME}/dist
 
-# switch user to have a clean home dir
-USER hyperglass
-# We use --user because hyperglass needs a writable python lib folder
-RUN pip3 install --user --no-cache-dir --no-warn-script-location hyperglass*.whl
+# Install poetry - 1.5.1 is the last version with python 3.7 support
+RUN wget -qO- https://install.python-poetry.org | POETRY_VERSION=1.5.1 python3 -
+
+# Install hyperglass with poetry (faster than pip and fixes an issue with debian buster)
+RUN $HOME/.local/bin/poetry install --only main --no-cache --compile
 
 
 FROM base AS app
 USER hyperglass
 
-# Add .local/bin to PATH
-ENV PATH="${PATH}:${HYPERGLASS_HOME}/.local/bin"
+# Add .venv/bin to PATH
+ENV PATH="${PATH}:${HYPERGLASS_HOME}/dist/.venv/bin"
 
 # Copy python files from builder
-COPY --from=builder --chown=hyperglass:hyperglass  ${HYPERGLASS_HOME}/.local/ ${HYPERGLASS_HOME}/.local/
+COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_HOME}/dist/.venv ${HYPERGLASS_HOME}/dist/.venv
+COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_HOME}/dist/hyperglass ${HYPERGLASS_HOME}/dist/hyperglass
 
 # Run setup with default config dir (${HYPERGLASS_HOME}/hyperglass)
 # Add dummy hyperglass.env.json
