@@ -16,10 +16,12 @@ services:
     # - ./commands.yaml:/opt/hyperglass/commands.yaml:ro
     # Optional put static files in a dedicated volume
     # - static:/opt/hyperglass/static/
+    # Optional store yarn cache
+    # - yarn-cache:/opt/.cache/
     tmpfs:
     - /tmp/
-    # Set hyperglass user gid and uid
-    - /opt/.local/lib/python3.9/site-packages/hyperglass/ui/.next:mode=700,uid=4001,gid=4001
+    # Make .next dir temporary and set hyperglass user gid and uid
+    - /opt/app/hyperglass/ui/.next:mode=700,uid=4001,gid=4001
     depends_on:
     - redis
     healthcheck:
@@ -48,6 +50,8 @@ volumes:
   redis-data:
   # Optional put static files in a dedicated volume
   # static:
+  # Optional store yarn cache
+  # yarn-cache:
 
 networks:
   hyperglass:
