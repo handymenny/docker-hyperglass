@@ -46,6 +46,8 @@ RUN wget -qO- https://install.python-poetry.org | python3 -
 # Install hyperglass with poetry (faster than pip and fixes an issue with debian buster)
 RUN $HOME/.local/bin/poetry install --only main --no-cache
 
+# Create next folder
+RUN mkdir ${HYPERGLASS_BIN_PATH}/hyperglass/ui/.next
 
 FROM base AS app
 USER hyperglass
@@ -60,6 +62,7 @@ COPY --from=builder --chown=hyperglass:hyperglass ${HYPERGLASS_BIN_PATH}/hypergl
 # Run setup with default config dir (${HYPERGLASS_HOME}/hyperglass)
 # Add dummy hyperglass.env.json
 RUN \
+  mkdir ${HYPERGLASS_HOME}/.cache && \
   hyperglass setup -d && \
   echo '{"configFile": "/", "buildId": "0"}' > ${HYPERGLASS_HOME}/hyperglass/static/hyperglass.env.json
 
