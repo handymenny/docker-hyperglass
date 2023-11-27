@@ -6,6 +6,14 @@ ARG HYPERGLASS_HOME=/opt
 FROM node:14-buster-slim AS base
 ARG HYPERGLASS_HOME
 
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    # 1.5.1 is the last version with python 3.7 support
+    POETRY_VERSION=1.5.1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 # install dependencies (python3 pip zlib libjpeg wget)
 RUN \
   apt-get update && \
@@ -20,9 +28,6 @@ RUN \
 
 FROM base AS builder
 ARG HYPERGLASS_HOME
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y build-essential libssl-dev zlib1g-dev libjpeg-dev git python3-dev python3-venv
@@ -33,11 +38,11 @@ RUN npx degit thatmattlove/hyperglass ${HYPERGLASS_HOME}/dist
 # Dist dir to avoid creating two dirs named hyperglass in ${HYPERGLASS_HOME}
 WORKDIR ${HYPERGLASS_HOME}/dist
 
-# Install poetry - 1.5.1 is the last version with python 3.7 support
-RUN wget -qO- https://install.python-poetry.org | POETRY_VERSION=1.5.1 python3 -
+# Install poetry
+RUN wget -qO- https://install.python-poetry.org | python3 -
 
 # Install hyperglass with poetry (faster than pip and fixes an issue with debian buster)
-RUN $HOME/.local/bin/poetry install --only main --no-cache --compile
+RUN $HOME/.local/bin/poetry install --only main --no-cache
 
 
 FROM base AS app
